@@ -415,14 +415,11 @@ else {
 }
 
 # -----------------------------------------------------------
-#        grant owner over the subscription 
+#        grant contributor over the subscription 
 # -----------------------------------------------------------
 
-# note that in a real deployment you may add further restrictions to what this service principal
-# could do, and/or restrict the ability to create resource groups.
-
 write-host ""
-write-host "assigning Owner to the service principal on the Azure subscription..." `
+write-host "assigning contributor to the service principal on the Azure subscription..." `
     -foregroundcolor yellow
 
 $subscriptionscope = "/subscriptions/$subscriptionid"
@@ -435,7 +432,7 @@ $existingownerassignment = invoke-azurecli -arguments @(
     "--query", "[0].id",
     "--output", "tsv",
     "--only-show-errors"
-) -captureoutput
+)
 
 if (
     [string]::isnullorwhitespace(
