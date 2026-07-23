@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: terraform-production
-  cance-in-progress: false
+  cancel-in-progress: false
 
 jobs:
   run-terraform:
