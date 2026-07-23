@@ -37,8 +37,8 @@ jobs:
     env:
       # req'd for oidc/federated credentials
       ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # enforce options for tf backend authentication
       ARM_USE_OIDC: "true"
