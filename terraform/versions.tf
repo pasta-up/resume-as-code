@@ -15,5 +15,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.22"
     }
+
+    time = {
+      source  = "hashicorp/time"
+      version = "0.14.0"
+    }
   }
 }

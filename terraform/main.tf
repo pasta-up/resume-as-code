@@ -26,7 +26,7 @@ resource "azurerm_static_web_app_custom_domain" "fqdn" {
   validation_type   = "cname-delegation"
 
   depends_on = [
-    cloudflare_dns_record.fqdn
+    time_sleep.wait_for_dns
   ]
 }
 
@@ -40,4 +40,14 @@ resource "cloudflare_dns_record" "fqdn" {
   content = azurerm_static_web_app.wa.default_host_name
   ttl     = 1
   proxied = var.cloudflare_proxy_enabled
+}
+
+# Utility Resources
+# ===============================================================================
+resource "time_sleep" "wait_for_dns" {
+  depends_on = [
+    cloudflare_dns_record.fqdn
+  ]
+
+  create_duration = "300s"
 }
