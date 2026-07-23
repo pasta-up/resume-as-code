@@ -1,4 +1,3 @@
-```powershell
 <#
 .SYNOPSIS
     This script is expected to be run from the Azure Cloud Shell PowerShell
@@ -19,7 +18,7 @@
     Configures:
         - required Azure role assignments (RBAC) for the service principal
         - optional federated identity support for GitHub Actions
-          using OIDC and passwordless authentication
+        - using OIDC and passwordless authentication
         - blob versioning for the Terraform state storage account
 
     Designed to run in Azure Cloud Shell using PowerShell, not Bash.
@@ -32,11 +31,8 @@
         - create and assign Azure role assignments (RBAC)
 #>
 
-[cmdletbinding()]
 param (
     [parameter()]
-    # User preference. Central US was selected based on Azure availability
-    # restrictions when this script was written.
     [string]$location = "centralus",
 
     [parameter()]
@@ -49,10 +45,10 @@ param (
     [string]$containername = "tfstate",
 
     [parameter()]
-    [string]$githubowner,
+    [string]$githubowner = "pasta-up",
 
     [parameter()]
-    [string]$githubrepo,
+    [string]$githubrepo = "resume-as-code",
 
     [parameter()]
     [string]$githubenv = "primary"
@@ -61,25 +57,21 @@ param (
 $erroractionpreference = "stop"
 set-strictmode -version latest
 
-function invoke-azurecli {
+function Invoke-AzureCli {
     param (
-        [parameter(mandatory)]
-        [string[]]$arguments
+        [Parameter(Mandatory)]
+        [string[]]$Arguments
     )
 
-    $output = & az @arguments 2>&1
+    & az @Arguments
 
-    if ($lastexitcode -ne 0) {
+    if ($LASTEXITCODE -ne 0) {
         throw @"
 Azure CLI command failed:
 
-az $($arguments -join ' ')
-
-$output
+az $($Arguments -join ' ')
 "@
     }
-
-    return $output
 }
 
 function test-stname-availability {
@@ -458,24 +450,32 @@ else {
 #                 create storage account
 # -----------------------------------------------------------
 
-write-host ""
-write-host "creating storage account '$storageaccountname'..." `
-    -foregroundcolor yellow
+Write-Host ""
+Write-Host "checking for storage account '$storageAccountName'..." `
+    -ForegroundColor Yellow
 
-$existingstorageaccount = invoke-azurecli -arguments @(
-    "storage", "account", "show",
-    "--name", $storageaccountname,
-    "--resource-group", $resourcegroupname,
-    "--query", "name",
-    "--output", "tsv",
-    "--only-show-errors"
+# Do not use Invoke-AzureCli here because ResourceNotFound is an expected
+# result when the storage account does not exist yet.
+$existingStorageAccount = & az storage account show `
+    --name $storageAccountName `
+    --resource-group $resourceGroupName `
+    --query name `
+    --output tsv `
+    --only-show-errors 2>$null
+
+$storageAccountExists = (
+    $LASTEXITCODE -eq 0 -and
+    -not [string]::IsNullOrWhiteSpace("$existingStorageAccount")
 )
 
-if ([string]::isnullorwhitespace("$existingstorageaccount")) {
-    invoke-azurecli -arguments @(
+if (-not $storageAccountExists) {
+    Write-Host "creating storage account '$storageAccountName'..." `
+        -ForegroundColor Yellow
+
+    Invoke-AzureCli -Arguments @(
         "storage", "account", "create",
-        "--name", $storageaccountname,
-        "--resource-group", $resourcegroupname,
+        "--name", $storageAccountName,
+        "--resource-group", $resourceGroupName,
         "--location", $location,
         "--sku", "Standard_LRS",
         "--kind", "StorageV2",
@@ -488,26 +488,90 @@ if ([string]::isnullorwhitespace("$existingstorageaccount")) {
             "managed-by=azure-bootstrap-script",
             "purpose=terraform-backend",
             "project=resume-as-code",
-        "--output", "none",
-        "--only-show-errors"
-    ) | out-null
+        "--output", "none"
+    )
 
-    write-host "storage account created." -foregroundcolor green
+    Write-Host "storage account creation request completed." `
+        -ForegroundColor Green
 }
 else {
-    write-host "storage account already exists." -foregroundcolor darkyellow
+    Write-Host "storage account already exists." `
+        -ForegroundColor DarkYellow
 }
 
-$storageaccountid = invoke-azurecli -arguments @(
-    "storage", "account", "show",
-    "--name", $storageaccountname,
-    "--resource-group", $resourcegroupname,
-    "--query", "id",
-    "--output", "tsv",
-    "--only-show-errors"
-)
+# Azure may briefly return ResourceNotFound after the create command completes.
+# Poll until the account is queryable and provisioning has succeeded.
 
-$storageaccountid = "$storageaccountid".trim()
+Write-Host "waiting for storage account provisioning..." `
+    -ForegroundColor Yellow
+
+$storageAccountId = $null
+$provisioningState = $null
+$maximumAttempts = 60
+$delaySeconds = 5
+
+for ($attempt = 1; $attempt -le $maximumAttempts; $attempt++) {
+    $storageAccountJson = & az storage account show `
+        --name $storageAccountName `
+        --resource-group $resourceGroupName `
+        --output json `
+        --only-show-errors 2>$null
+
+    if ($LASTEXITCODE -eq 0 -and
+        -not [string]::IsNullOrWhiteSpace("$storageAccountJson")) {
+
+        $storageAccount = $storageAccountJson | ConvertFrom-Json
+
+        $storageAccountId = $storageAccount.id
+        $provisioningState = $storageAccount.provisioningState
+
+        Write-Host (
+            "storage account provisioning state: {0} ({1}/{2})" -f `
+                $provisioningState,
+                $attempt,
+                $maximumAttempts
+        )
+
+        if ($provisioningState -eq "Succeeded") {
+            break
+        }
+
+        if ($provisioningState -eq "Failed") {
+            throw @"
+Azure reported that storage account provisioning failed.
+
+Storage account: $storageAccountName
+Resource group: $resourceGroupName
+"@
+        }
+    }
+    else {
+        Write-Host (
+            "storage account is not queryable yet ({0}/{1})" -f `
+                $attempt,
+                $maximumAttempts
+        )
+    }
+
+    Start-Sleep -Seconds $delaySeconds
+}
+
+if ([string]::IsNullOrWhiteSpace("$storageAccountId") -or
+    $provisioningState -ne "Succeeded") {
+
+    throw @"
+Timed out waiting for the storage account to become ready.
+
+Storage account: $storageAccountName
+Resource group: $resourceGroupName
+Last provisioning state: $provisioningState
+"@
+}
+
+$storageAccountId = "$storageAccountId".Trim()
+
+Write-Host "storage account is ready." -ForegroundColor Green
+Write-Host "storage account ID: $storageAccountId"
 
 # -----------------------------------------------------------
 #                 enable blob versioning
@@ -645,4 +709,3 @@ write-host "AZURE_CLIENT_ID=$applicationid"
 write-host "AZURE_TENANT_ID=$tenantid"
 write-host "AZURE_SUBSCRIPTION_ID=$subscriptionid"
 write-host ""
-```
