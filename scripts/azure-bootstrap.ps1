@@ -407,42 +407,48 @@ else {
 }
 
 # -----------------------------------------------------------
-#        grant contributor over resource group
+#        grant owner over the subscription 
 # -----------------------------------------------------------
 
+# note that in a real deployment you may add further restrictions to what this service principal
+# could do, and/or restrict the ability to create resource groups.
+
 write-host ""
-write-host "assigning Contributor to the service principal on the Terraform resource group..." `
+write-host "assigning Owner to the service principal on the Azure subscription..." `
     -foregroundcolor yellow
 
-$existingcontributorassignment = invoke-azurecli -arguments @(
+$subscriptionscope = "/subscriptions/$subscriptionid"
+
+$existingownerassignment = invoke-azurecli -arguments @(
     "role", "assignment", "list",
     "--assignee-object-id", $serviceprincipalobjectid,
     "--role", "Contributor",
-    "--scope", $resourcegroupid,
+    "--scope", $subscriptionscope,
     "--query", "[0].id",
     "--output", "tsv",
     "--only-show-errors"
-)
+) -captureoutput
 
 if (
     [string]::isnullorwhitespace(
-        "$existingcontributorassignment"
+        "$existingownerassignment"
     )
 ) {
     invoke-azurecli -arguments @(
         "role", "assignment", "create",
         "--assignee-object-id", $serviceprincipalobjectid,
         "--assignee-principal-type", "ServicePrincipal",
-        "--role", "Contributor",
-        "--scope", $resourcegroupid,
+        "--role", "Owner",
+        "--scope", $subscriptionscope,
         "--output", "none",
         "--only-show-errors"
     ) | out-null
 
-    write-host "Contributor assignment created." -foregroundcolor green
+    write-host "Owner assignment created at subscription scope." `
+        -foregroundcolor green
 }
 else {
-    write-host "Contributor assignment already exists." `
+    write-host "Owner assignment already exists at subscription scope." `
         -foregroundcolor darkyellow
 }
 
