@@ -45,10 +45,10 @@ param (
     [string]$containername = "tfstate",
 
     [parameter()]
-    [string]$githubowner = "pasta-up",
+    [string]$githubowner = "pasta-up@45907741",
 
     [parameter()]
-    [string]$githubrepo = "resume-as-code",
+    [string]$githubrepo = "resume-as-code@1308079075",
 
     [parameter()]
     [string]$githubenv = "production"
