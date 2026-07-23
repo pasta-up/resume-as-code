@@ -1,0 +1,90 @@
+name: terraform-deploy-resume-site
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-deploy.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-deploy.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-production
+  cance-in-progress: false
+
+jobs:
+  run-terraform:
+    name: terraform
+    runs-on: [ubuntu-latest] # unless you see "self-hosted" here this is running on a public runner
+    environment: production
+
+    defaults:
+      run:
+        working-directory: terraform
+    
+    env:
+      # req'd for oidc/federated credentials
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      # enforce options for tf backend authentication
+      ARM_USE_OIDC: "true"
+      ARM_USE_AZUREAD: "true"
+
+      # defaults for terraform execution
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+
+      # terraform variables population
+      TF_VAR_cloudflare_root_domain_zoneid: ${{ secrets.TF_VAR_CLOUDFLARE_ROOT_DOMAIN_ZONEID }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.TF_VAR_CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_root_domain_name: ${{ vars.TF_VAR_CLOUDFLARE_ROOT_DOMAIN_NAME }}
+      TF_VAR_cloudflare_subdomain_name: ${{ vars.TF_VAR_CLOUDFLARE_SUBDOMAIN_NAME }}
+
+    steps:
+      - name: checkout repository
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: configure terraform
+        id: terraform-setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.8" # 07/2026
+
+      - name: verify terraform code format
+        id: terraform-fmt
+        run: |
+          terraform fmt -check -recursive
+
+      - name: initialize terraform
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ vars.TF_BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_BACKEND_CONTAINER }}" \
+            -backend-config="key=${{ vars.TF_BACKEND_KEY }}"
+
+      - name: validate terraform syntax
+        run: |
+          terraform validate
+
+      - name: generate terraform plan
+        run: terraform plan -out=tfplan
+
+      - name: execute terraform apply
+        if: github.event_name != 'pull_request'
+        run: terraform apply -autoapprove tfplan

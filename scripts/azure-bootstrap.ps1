@@ -51,7 +51,7 @@ param (
     [string]$githubrepo = "resume-as-code",
 
     [parameter()]
-    [string]$githubenv = "primary"
+    [string]$githubenv = "production"
 )
 
 $erroractionpreference = "stop"
