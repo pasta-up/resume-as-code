@@ -322,6 +322,7 @@ write-host "service principal object id: $serviceprincipalobjectid"
 #        set optional federated identity credential
 # -----------------------------------------------------------
 
+
 if (
     -not [string]::isnullorwhitespace($githubowner) -and
     -not [string]::isnullorwhitespace($githubrepo)
@@ -331,11 +332,11 @@ if (
         -foregroundcolor yellow
 
     $repo = Invoke-RestMethod `
-        "https://api.github.com/repos/$githubowner/$githubrepository"
+        "https://api.github.com/repos/$githubowner/$githubrepo"
 
     $githubownerid = $repo.owner.id
     $githubrepoid = $repo.id
-    
+
     $federatedcredentialname = "github-$githubenv"
     $federatedsubject =
         "repo:${githubowner}@${githubownerid}/${githubrepo}@${githubrepoid}:environment:${githubenv}"
@@ -357,6 +358,7 @@ if (
             -foregroundcolor darkyellow
     }
     else {
+        
         $federatedcredential = @{
             name        = $federatedcredentialname
             issuer      = "https://token.actions.githubusercontent.com"
