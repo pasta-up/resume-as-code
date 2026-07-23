@@ -13,8 +13,8 @@ locals {
   default_tags = {
     application = var.project_name
     environment = var.environment
-    managed-by = "terraform"
-    repository = "github.com/pasta-up/resume-as-code"
+    managed-by  = "terraform"
+    repository  = "github.com/pasta-up/resume-as-code"
   }
 
   tags = merge(

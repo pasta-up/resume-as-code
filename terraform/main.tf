@@ -22,8 +22,8 @@ resource "azurerm_static_web_app" "wa" {
 
 resource "azurerm_static_web_app_custom_domain" "fqdn" {
   static_web_app_id = azurerm_static_web_app.wa.id
-  domain_name = local.site_fqdn
-  validation_type = "cname-delegation"
+  domain_name       = local.site_fqdn
+  validation_type   = "cname-delegation"
 
   depends_on = [
     cloudflare_dns_record.fqdn
