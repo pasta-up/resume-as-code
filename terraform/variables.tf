@@ -42,25 +42,25 @@ variable "az_location" {
 variable "cloudflare_root_domain_name" {
   description = ""
   type        = string
-  default     = ""    # configured at runtime from github repo/github action
+  default     = "" # configured at runtime from github repo/github action
 }
 
 variable "cloudflare_subdomain_name" {
   description = ""
   type        = string
-  default     = ""    # configured at runtime from github repo/github action
+  default     = "" # configured at runtime from github repo/github action
 }
 
 variable "cloudflare_root_domain_zoneid" {
   description = ""
   type        = string
-  default     = ""    # configured at runtime from github repo/github action
+  default     = "" # configured at runtime from github repo/github action
 }
 
 variable "cloudflare_api_token" {
   description = ""
   type        = string
-  default     = ""    # configured at runtime from github repo/github action
+  default     = "" # configured at runtime from github repo/github action
 }
 
 variable "cloudflare_proxy_enabled" {
