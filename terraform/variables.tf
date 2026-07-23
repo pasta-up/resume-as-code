@@ -5,7 +5,7 @@
 variable "project_name" {
   description = "used as a prefix for naming resources in azure, and in tags"
   type        = string
-  default     = "resume-as-code"
+  default     = "resumeascode"
 
   validation {
     condition = (

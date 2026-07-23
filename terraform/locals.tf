@@ -5,8 +5,8 @@
 # and using that data, allows you to create custom references specific to that deployment without hardcoding values.
 
 locals {
-  az_resourcegroup_name = "rg${var.project_name}2026"
-  az_static_webapp_name = "wa${var.project_name}2026"
+  az_resourcegroup_name = "rg-${var.project_name}-2026"
+  az_static_webapp_name = "wa-${var.project_name}-2026"
 
   site_fqdn = "${var.cloudflare_subdomain_name}.${var.cloudflare_root_domain_name}"
 

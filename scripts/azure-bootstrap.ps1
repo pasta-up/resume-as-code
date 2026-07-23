@@ -415,11 +415,11 @@ else {
 }
 
 # -----------------------------------------------------------
-#        grant contributor over the subscription 
+#        grant owner over the subscription 
 # -----------------------------------------------------------
 
 write-host ""
-write-host "assigning contributor to the service principal on the Azure subscription..." `
+write-host "assigning owner to the service principal on the Azure subscription..." `
     -foregroundcolor yellow
 
 $subscriptionscope = "/subscriptions/$subscriptionid"
@@ -427,7 +427,7 @@ $subscriptionscope = "/subscriptions/$subscriptionid"
 $existingownerassignment = invoke-azurecli -arguments @(
     "role", "assignment", "list",
     "--assignee-object-id", $serviceprincipalobjectid,
-    "--role", "Contributor",
+    "--role", "Owner",
     "--scope", $subscriptionscope,
     "--query", "[0].id",
     "--output", "tsv",
