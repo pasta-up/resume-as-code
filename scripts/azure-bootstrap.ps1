@@ -45,10 +45,10 @@ param (
     [string]$containername = "tfstate",
 
     [parameter()]
-    [string]$githubowner = "pasta-up@45907741",
+    [string]$githubowner = "pasta-up",
 
     [parameter()]
-    [string]$githubrepo = "resume-as-code@1308079075",
+    [string]$githubrepo = "resume-as-code",
 
     [parameter()]
     [string]$githubenv = "production"
@@ -330,9 +330,15 @@ if (
     write-host "configuring app registration for GitHub Actions OIDC..." `
         -foregroundcolor yellow
 
+    $repo = Invoke-RestMethod `
+        "https://api.github.com/repos/$githubowner/$githubrepository"
+
+    $githubownerid = $repo.owner.id
+    $githubrepoid = $repo.id
+    
     $federatedcredentialname = "github-$githubenv"
     $federatedsubject =
-        "repo:${githubowner}/${githubrepo}:environment:${githubenv}"
+        "repo:${githubowner}@${githubownerid}/${githubrepo}@${githubrepoid}:environment:${githubenv}"
 
     $existingcredentialname = invoke-azurecli -arguments @(
         "ad", "app", "federated-credential", "list",
